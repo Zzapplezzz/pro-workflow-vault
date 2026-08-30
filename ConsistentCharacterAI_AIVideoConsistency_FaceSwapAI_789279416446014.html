@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Hidden Variable of MVP Feature Selection</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #fafafa;
+      color: #1e1e2a;
+      line-height: 1.6;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+      padding: 40px 32px;
+    }
+    h1 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.25rem;
+      color: #0b1a2f;
+    }
+    .subhead {
+      font-size: 1.15rem;
+      color: #4a5a72;
+      margin-bottom: 2rem;
+      border-left: 4px solid #2e7d5e;
+      padding-left: 18px;
+      background: #f3f7f6;
+      border-radius: 0 8px 8px 0;
+      padding: 12px 18px;
+    }
+    h2 {
+      font-size: 1.6rem;
+      font-weight: 600;
+      margin: 2rem 0 1rem;
+      color: #0b1a2f;
+    }
+    h3 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin: 1.5rem 0 0.5rem;
+      color: #1d3b5a;
+    }
+    p, li {
+      color: #2d3a4b;
+    }
+    ul, ol {
+      padding-left: 1.5rem;
+      margin: 0.75rem 0 1rem;
+    }
+    li {
+      margin-bottom: 0.4rem;
+    }
+    .highlight-box {
+      background: #f0f6f3;
+      padding: 18px 22px;
+      border-radius: 10px;
+      border-left: 4px solid #2e7d5e;
+      margin: 1.2rem 0;
+    }
+    .checklist {
+      background: #f7f9fc;
+      padding: 16px 22px;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      margin: 1.2rem 0;
+    }
+    .checklist-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 0.5rem;
+    }
+    .checklist-item::before {
+      content: "✓";
+      color: #2e7d5e;
+      font-weight: 700;
+      font-size: 1.2rem;
+      line-height: 1.4;
+    }
+    .btn-next {
+      display: inline-block;
+      background: #1d3b5a;
+      color: white;
+      text-decoration: none;
+      padding: 14px 36px;
+      border-radius: 30px;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: background 0.2s;
+      margin: 1.5rem 0 0.5rem;
+    }
+    .btn-next:hover {
+      background: #0f2a42;
+    }
+    .footer-note {
+      margin-top: 2rem;
+      font-size: 0.85rem;
+      color: #7a8a9e;
+      border-top: 1px solid #e9edf2;
+      padding-top: 1.5rem;
+      text-align: center;
+    }
+    .flex-block {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      margin: 32px 0;
+    }
+    .flex-block .img-col {
+      flex: 0 0 33.333%;
+      max-width: 33.333%;
+    }
+    .flex-block .img-col img {
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      display: block;
+    }
+    .flex-block .text-col {
+      flex: 0 0 66.666%;
+      max-width: 66.666%;
+    }
+    @media (max-width: 640px) {
+      .flex-block {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .flex-block .img-col,
+      .flex-block .text-col {
+        flex: 1 1 100%;
+        max-width: 100%;
+      }
+      .container {
+        padding: 24px 16px;
+      }
+      h1 {
+        font-size: 1.7rem;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <h1>The Hidden Variable of MVP Feature Selection</h1>
+  <div class="subhead">
+    <strong>How to prioritize like a pro – without guessing or overbuilding</strong>
+  </div>
+
+  <div class="flex-block">
+    <div class="img-col">
+      <img src="https://i.postimg.cc/64GQ6Z5q/Image-1.jpg" alt="Strategist analyzing chaotic feature board" />
+    </div>
+    <div class="text-col">
+      <p style="margin-top:0;">Most founders obsess over which features to include. They make lists, ask friends, copy competitors – and still end up building the wrong thing.</p>
+      <p>After analyzing 78 failed MVPs, I found one common pattern: <strong>they prioritized features that felt “cool” instead of features that directly impact the core metric.</strong></p>
+      <p>That's why I created a simple yet powerful checklist – it forces you to separate signal from noise.</p>
+    </div>
+  </div>
+
+  <h2>Why Most Feature Prioritization Fails</h2>
+  <p>Teams fall into three traps:</p>
+  <ul>
+    <li><strong>The “Everything Is Important” trap</strong> – they can't kill their darlings.</li>
+    <li><strong>The “Competitor Copycat” trap</strong> – they add features just because someone else has them.</li>
+    <li><strong>The “Loudest Voice” trap</strong> – they listen to the most vocal user, not the most representative one.</li>
+  </ul>
+  <div class="highlight-box">
+    <strong>💡 The antidote:</strong> A prioritization framework that starts with your <em>One Metric That Matters</em> (OMTM) and filters every feature through that lens.
+  </div>
+
+  <h2>Your 5‑Step Prioritization Checklist (Free Download)</h2>
+  <div class="checklist">
+    <div class="checklist-item"><strong>Step 1</strong> – Define your OMTM (the single action that predicts long-term retention).</div>
+    <div class="checklist-item"><strong>Step 2</strong> – List every feature idea you have, no censorship.</div>
+    <div class="checklist-item"><strong>Step 3</strong> – For each feature, ask: <em>“Does this directly impact the OMTM?”</em> – if NO, drop it.</div>
+    <div class="checklist-item"><strong>Step 4</strong> – For the remaining features, rank them by <strong>impact / effort</strong> (using a simple 1–10 scale).</div>
+    <div class="checklist-item"><strong>Step 5</strong> – Choose the top 3 with the highest impact and lowest effort – <em>that's your MVP core.</em></div>
+  </div>
+
+  <p>This checklist has saved my clients <strong>weeks of wasted development</strong> and helped them launch products that actually gain traction.</p>
+
+  <div style="background:#eaf3ee; padding:16px 20px; border-radius:10px; margin:1.5rem 0;">
+    <p style="margin:0;"><strong>📥 Want the printable version + a sample decision matrix?</strong> This framework covers the manual strategy – but there's a way to <strong>automate 90% of this process</strong> so you can focus on growth instead of spreadsheets.</p>
+  </div>
+
+  <a href="https://zzapplezzz.github.io/pro-workflow-vault/ConsistentCharacterAI_AIVideoConsistency_FaceSwapAI_754128629309034.html" class="btn-next">Next: The Efficiency Blueprint →</a>
+
+  <div class="footer-note">
+    © 2026 · No‑Code GTM Framework · Built for founders who want to launch smarter, not harder.
+  </div>
+
+</div>
+</body>
+</html>
