@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulateur v12 - Transparence Financière</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: #334155; margin: 0; padding: 10px; }
+        .container { max-width: 1200px; margin: 0 auto; background: #f8fafc; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        .header { background: #0d9488; color: white; padding: 20px; text-align: center; }
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; padding: 15px; background: #e2e8f0; }
+        .stat-card { background: white; padding: 10px; border-radius: 8px; border-left: 4px solid #0d9488; }
+        .stat-card h3 { font-size: 0.7em; color: #64748b; margin: 0 0 5px 0; text-transform: uppercase; }
+        .stat-card .val { font-size: 1.2em; font-weight: bold; color: #0f766e; }
+        
+        .tabs { display: flex; background: #cbd5e1; padding: 5px; gap: 5px; overflow-x: auto; }
+        .tab-btn { flex: 1; padding: 10px; background: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; color: #64748b; white-space: nowrap; }
+        .tab-btn.active { background: #0d9488; color: white; }
+        
+        .content { padding: 20px; }
+        .panel { display: none; }
+        .panel.active { display: block; }
+        
+        .card { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e2e8f0; }
+        .card h3 { color: #0f766e; margin-top: 0; }
+        
+        .btn { display: block; width: 100%; padding: 12px; background: #0d9488; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 1em; margin-top: 10px; text-align: center; font-weight: bold; }
+        .btn:hover { background: #0f766e; }
+        .btn-secondary { background: #64748b; }
+        .btn-large { font-size: 1.2em; padding: 15px; background: linear-gradient(135deg, #0d9488, #0f766e); }
+        
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; align-items: center; justify-content: center; }
+        .modal.open { display: flex; }
+        .modal-box { background: white; padding: 25px; border-radius: 12px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 0.9em; margin-top: 10px; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background: #f1f5f9; color: #475569; }
+        
+        .positive { color: #166534; font-weight: bold; }
+        .negative { color: #dc2626; font-weight: bold; }
+        
+        /* Styles spécifiques pour les détails financiers */
+        .finance-detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .detail-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+        }
+        .detail-box h4 { margin-top: 0; color: #475569; font-size: 0.9em; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px; }
+        .detail-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.85em; }
+        .detail-row.total { font-weight: bold; border-top: 1px dashed #cbd5e1; padding-top: 5px; margin-top: 5px; color: #0f766e; }
+        
+        .debt-progress-bar {
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        .debt-fill {
+            height: 100%;
+            background: #0d9488;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>🏛️ Simulateur v12 - Transparence Financière</h1>
+        <p>Détail Salaires • Amortissement Dettes • Gestion Réelle</p>
+    </div>
+
+    <div class="dashboard">
+        <div class="stat-card">
+            <h3>💰 Trésorerie</h3>
+            <div class="val" id="ui-treasury">30 000 €</div>
+        </div>
+        <div class="stat-card">
+            <h3>📊 CA Mensuel</h3>
+            <div class="val" id="ui-revenue">0 €</div>
+        </div>
+        <div class="stat-card">
+            <h3>💸 Charges Totales</h3>
+            <div class="val" id="ui-charges">0 €</div>
+        </div>
+        <div class="stat-card">
+            <h3>👥 Employés</h3>
+            <div class="val" id="ui-employees">0</div>
+        </div>
+        <div class="stat-card">
+            <h3>📅 Date</h3>
+            <div class="val" id="ui-date">Jan 2026</div>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('events')">📅 Journal</button>
+        <button class="tab-btn" onclick="switchTab('finance')">💶 Détails Financiers</button>
+        <button class="tab-btn" onclick="switchTab('debts')">💳 Dettes & Amort.</button>
+        <button class="tab-btn" onclick="switchTab('management')">⚙️ Gestion & RH</button>
+        <button class="tab-btn" onclick="switchTab('holding')">👑 Holding</button>
+    </div>
+
+    <div class="content">
+        <!-- ONGLET JOURNAL -->
+        <div id="tab-events" class="panel active">
+            <h3>📜 Journal des Événements</h3>
+            <div id="event-area" style="max-height: 200px; overflow-y: auto; border: 1px solid #e2e8f0; padding: 10px; border-radius: 6px; background: #f8fafc; margin-bottom: 15px;">
+                <div class="event-item">Bienvenue ! Cliquez sur "Mois Suivant" pour commencer.</div>
+            </div>
+            <div id="report-area"></div>
+        </div>
+
+        <!-- ONGLET DÉTAILS FINANCIERS (NOUVEAU) -->
+        <div id="tab-finance" class="panel">
+            <h3>💶 Détail des Coûts Mensuels</h3>
+            <div id="finance-details-container">
+                <p style="color:#64748b; text-align:center;">Aucune donnée pour le moment. Avancez d'un mois.</p>
+            </div>
+        </div>
+
+        <!-- ONGLET DETTES & AMORTISSEMENT (NOUVEAU) -->
+        <div id="tab-debts" class="panel">
+            <h3>💳 Tableau d'Amortissement des Dettes</h3>
+            <div id="debts-amortization-container">
+                <p style="color:#64748b; text-align:center;">Aucune dette en cours.</p>
+            </div>
+        </div>
+
+        <!-- ONGLET GESTION -->
+        <div id="tab-management" class="panel">
+            <h3>⚙️ Gestion Active & Recrutement</h3>
+            <div id="manager-area">
+                <div class="card">
+                    <h3>👔 Recruter un Gestionnaire</h3>
+                    <p>Déléguez la gestion quotidienne.</p>
+                    <button class="btn" onclick="openManagerModal()">Voir les profils</button>
+                </div>
+            </div>
+            <div class="card">
+                <h3>💰 Ma Rémunération</h3>
+                <button class="btn btn-secondary" onclick="openSalaryModal()">Définir mon salaire</button>
+            </div>
+        </div>
+
+        <!-- ONGLET HOLDING -->
+        <div id="tab-holding" class="panel">
+            <h3>👑 Structure Holding</h3>
+            <div id="holding-area">
+                <div class="card">
+                    <p>Aucune holding créée.</p>
+                    <button class="btn" onclick="createHolding()">Créer Holding (2 000 €)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div style="display:flex; gap:10px; justify-content:center; margin: 20px 0;">
+        <button class="btn btn-large" id="btn-next-month" style="max-width: 200px;">▶ Mois Suivant</button>
+        <button class="btn btn-large btn-secondary" id="btn-sim-year" style="max-width: 200px;">⏩ Simuler 1 An</button>
+    </div>
+</div>
+
+<!-- MODALS (Acquisition, Manager, Salary) -->
+<div id="modal-acq" class="modal">
+    <div class="modal-box">
+        <h2>🎯 Acquisition : Jardinerie Le Mans</h2>
+        <p><strong>Prix :</strong> 450 000 €</p>
+        <hr>
+        <label>Type d'achat :</label>
+        <select id="acq-type" style="width:100%; padding:8px; margin-bottom:10px;">
+            <option value="fonds">Fonds de Commerce (Clean)</option>
+            <option value="parts">Parts Sociales (Risque Passif)</option>
+        </select>
+        <label>Statut Juridique :</label>
+        <select id="acq-status" style="width:100%; padding:8px; margin-bottom:10px;">
+            <option value="SASU">SASU (Assimilé Salarié - Charges ~80%)</option>
+            <option value="EURL">EURL (TNS - Charges ~45%)</option>
+        </select>
+        <button class="btn btn-large" onclick="confirmAcquisition()">✅ Valider (-30k€ Apport)</button>
+        <button class="btn btn-secondary" onclick="closeModal('modal-acq')">Annuler</button>
+    </div>
+</div>
+
+<div id="modal-manager" class="modal">
+    <div class="modal-box">
+        <h2>👔 Recrutement Gestionnaire</h2>
+        <button class="btn btn-secondary" onclick="hireManager('junior')">👤 Junior (2 500€/mois)<br><small>Autonomie limitée</small></button>
+        <button class="btn btn-secondary" onclick="hireManager('senior')">👨‍💼 Senior (4 000€/mois)<br><small>Forte autonomie, +5% CA</small></button>
+        <button class="btn btn-secondary" onclick="hireManager('expert')">🦸 Expert (6 000€/mois)<br><small>Autonomie totale, +10% CA</small></button>
+        <button class="btn" onclick="closeModal('modal-manager')">Fermer</button>
+    </div>
+</div>
+
+<div id="modal-salary" class="modal">
+    <div class="modal-box">
+        <h2>💰 Définir ma Rémunération</h2>
+        <button class="btn btn-secondary" onclick="setSalary('none')">🚫 Pas de salaire (0€)</button>
+        <button class="btn btn-secondary" onclick="setSalary('p1')">📌 Palier 1 (Retraite min) ~600€ Brut</button>
+        <button class="btn btn-secondary" onclick="setSalary('p2')">🏥 Palier 2 (Maladie max) ~2126€ Brut</button>
+        <button class="btn btn-secondary" onclick="setSalary('p3')">🏦 Palier 3 (Plafond SS) ~4000€ Brut</button>
+        <button class="btn" onclick="closeModal('modal-salary')">Fermer</button>
+    </div>
+</div>
+
+<script>
+    // --- ÉTAT DU JEU ---
+    let state = {
+        month: 0,
+        year: 2026,
+        treasury: 30000,
+        companies: [],
+        debts: [],
+        history: [],
+        lastMonthData: null, // Stocke les données détaillées du dernier mois
+        holding: false,
+        salaryLevel: 'none',
+        managerLevel: null,
+        acquired1: false,
+        events: []
+    };
+
+    const MONTHS = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+    const MANAGERS = {
+        junior: { cost: 2500, boost: 0 },
+        senior: { cost: 4000, boost: 0.05 },
+        expert: { cost: 6000, boost: 0.10 }
+    };
+    const SALARIES = {
+        p1: { brut: 601, net: 470 },
+        p2: { brut: 2126, net: 1660 },
+        p3: { brut: 4000, net: 3100 }
+    };
+
+    const COMPANY_1 = {
+        name: "Jardinerie Le Mans",
+        price: 450000,
+        revenue: 93750,
+        opex: 25000,
+        employees: [
+            { role: "Vendeur", salary: 2100 },
+            { role: "Employé", salary: 1800 },
+            { role: "Chef", salary: 2800 },
+            { role: "Caissier", salary: 1800 }
+        ]
+    };
+
+    // --- MOTEUR ---
+
+    function init() {
+        updateUI();
+        document.getElementById('btn-next-month').addEventListener('click', () => advanceMonth(1));
+        document.getElementById('btn-sim-year').addEventListener('click', () => advanceMonth(12));
+    }
+
+    function advanceMonth(count) {
+        for(let i=0; i<count; i++) {
+            state.month++;
+            if (state.month > 12) {
+                state.month = 1;
+                state.year++;
+                payIS();
+            }
+
+            if (!state.acquired1 && state.month >= 1 && i===0) {
+                showAcquisitionModal();
+                break;
+            }
+
+            calculateFinances();
+            generateRandomEvent();
+        }
+        updateUI();
+        saveState();
+    }
+
+    function calculateFinances() {
+        if (state.companies.length === 0) return;
+
+        let totalRev = 0;
+        let totalOpex = 0;
+        
+        // Données détaillées pour le rapport
+        let details = {
+            employees: [],
+            manager: null,
+            director: null,
+            debts: []
+        };
+
+        // Calcul Entreprise
+        state.companies.forEach(c => {
+            let rev = c.revenue;
+            if (state.managerLevel) rev *= (1 + MANAGERS[state.managerLevel].boost);
+            totalRev += rev;
+            totalOpex += c.opex;
+            
+            c.employees.forEach(e => {
+                let charges = e.salary * 0.45; // Charges patronales standard
+                details.employees.push({ role: e.role, brut: e.salary, charges: charges, total: e.salary + charges });
+            });
+        });
+
+        // Synergie Holding
+        if (state.holding && state.companies.length >= 2) {
+            totalRev *= 1.05;
+            totalOpex *= 0.97;
+        }
+        if (state.holding) totalOpex += totalRev * 0.05; // Management Fees
+
+        // Manager
+        if (state.managerLevel) {
+            let mCost = MANAGERS[state.managerLevel].cost;
+            let mCharges = mCost * 0.45; // On simplifie les charges manager à 45% pour l'exemple
+            details.manager = { level: state.managerLevel, brut: mCost, charges: mCharges, total: mCost + mCharges };
+        }
+
+        // Dirigeant
+        let dirCost = 0;
+        if (state.salaryLevel !== 'none') {
+            let brut = SALARIES[state.salaryLevel].brut;
+            let isFirstCoEURL = state.companies[0].status === 'EURL';
+            let rate = isFirstCoEURL ? 0.45 : 0.80; // TNS vs Assimilé
+            let charges = brut * rate;
+            dirCost = brut + charges;
+            details.director = { brut: brut, charges: charges, total: dirCost, status: isFirstCoEURL ? 'TNS' : 'Assimilé' };
+        }
+
+        // Dettes & Amortissement
+        let debtPaymentTotal = 0;
+        state.debts.forEach(d => {
+            if (d.remaining > 0) {
+                let interest = (d.remaining * d.rate) / 12;
+                let capital = d.monthlyPayment - interest;
+                if (capital > d.remaining) { // Dernier mois
+                    capital = d.remaining;
+                    interest = d.monthlyPayment - capital;
+                }
+                
+                d.remaining -= capital;
+                if (d.remaining < 0) d.remaining = 0;
+                
+                debtPaymentTotal += d.monthlyPayment;
+                
+                details.debts.push({
+                    name: d.name,
+                    monthlyPayment: d.monthlyPayment,
+                    interest: interest,
+                    capital: capital,
+                    remaining: d.remaining
+                });
+            }
+        });
+
+        let totalCharges = totalOpex + 
+                           details.employees.reduce((a,b) => a + b.total, 0) + 
+                           (details.manager ? details.manager.total : 0) + 
+                           (details.director ? details.director.total : 0) + 
+                           debtPaymentTotal;
+
+        let profit = totalRev - totalCharges;
+        state.treasury += profit;
+
+        // Sauvegarde des détails pour affichage
+        state.lastMonthData = {
+            rev: totalRev,
+            opex: totalOpex,
+            details: details,
+            profit: profit,
+            treasury: state.treasury
+        };
+
+        state.history.push({
+            m: MONTHS[state.month-1] + ' ' + state.year,
+            rev: totalRev,
+            chg: totalCharges,
+            prof: profit,
+            trs: state.treasury
+        });
+
+        showReport(state.lastMonthData);
+    }
+
+    function payIS() {
+        let yearlyProfit = state.history.slice(-12).reduce((acc, h) => acc + h.prof, 0);
+        if (yearlyProfit > 0) {
+            let tax = (yearlyProfit * 0.25); 
+            state.treasury -= tax;
+            logEvent(`🏛️ Impôt Société Payé : -${formatMoney(tax)}`, 'negative');
+        }
+    }
+
+    function generateRandomEvent() {
+        const events = [
+            { text: "📈 Hausse saisonnière", impact: 5000 },
+            { text: "🔧 Panne équipement", impact: -2000 },
+            { text: "🤝 Nouveau contrat B2B", impact: 3000 },
+            { text: "⚡ Hausse énergie", impact: -1500 }
+        ];
+        if (Math.random() > 0.3) {
+            const evt = events[Math.floor(Math.random() * events.length)];
+            state.treasury += evt.impact;
+            logEvent(`${evt.text} (${evt.impact > 0 ? '+' : ''}${formatMoney(evt.impact)})`, evt.impact > 0 ? 'positive' : 'negative');
+        }
+    }
+
+    // --- ACTIONS ---
+
+    function showAcquisitionModal() { document.getElementById('modal-acq').classList.add('open'); }
+
+    function confirmAcquisition() {
+        const apport = 30000;
+        const creditVendeur = COMPANY_1.price * 0.4;
+        const creditHonneur = 20000;
+        const bankLoan = COMPANY_1.price - apport - creditVendeur - creditHonneur;
+
+        state.treasury -= apport;
+        state.acquired1 = true;
+        state.companies.push({ ...COMPANY_1, status: document.getElementById('acq-status').value });
+
+        addDebt("Crédit Vendeur", creditVendeur, 84, 0);
+        addDebt("Crédit Honneur", creditHonneur, 84, 0);
+        addDebt("Emprunt Bancaire", bankLoan, 84, 0.045);
+
+        closeModal('modal-acq');
+        logEvent("✅ Acquisition réalisée ! Apport de 30k€ déduit.", 'positive');
+        updateUI();
+    }
+
+    function addDebt(name, amount, months, rate) {
+        state.debts.push({
+            name: name,
+            total: amount,
+            remaining: amount,
+            monthlyPayment: amount / months,
+            rate: rate,
+            monthsLeft: months
+        });
+    }
+
+    function createHolding() {
+        if (state.treasury < 2000) { alert("Pas assez de trésorerie"); return; }
+        state.treasury -= 2000;
+        state.holding = true;
+        logEvent("👑 Holding créée ! Synergies activées.", 'positive');
+        updateUI();
+    }
+
+    function hireManager(level) {
+        state.managerLevel = level;
+        closeModal('modal-manager');
+        logEvent(`👔 Gestionnaire ${level.toUpperCase()} recruté !`, 'positive');
+        updateUI();
+    }
+
+    function setSalary(level) {
+        state.salaryLevel = level;
+        closeModal('modal-salary');
+        logEvent("✅ Stratégie salariale mise à jour.", 'positive');
+        updateUI();
+    }
+
+    // --- AFFICHAGE ---
+
+    function logEvent(text, type) {
+        state.events.unshift({ text, type });
+        const area = document.getElementById('event-area');
+        const div = document.createElement('div');
+        div.className = `event-item`;
+        div.style.borderBottom = "1px solid #e2e8f0";
+        div.style.padding = "5px 0";
+        div.innerHTML = `<span style="color:${type==='positive'?'#166534':'#dc2626'}">${text}</span>`;
+        area.prepend(div);
+    }
+
+    function updateUI() {
+        document.getElementById('ui-treasury').innerText = formatMoney(state.treasury);
+        document.getElementById('ui-date').innerText = MONTHS[state.month-1] + ' ' + state.year;
+        
+        // Mise à jour Onglet Dettes (Amortissement)
+        const debtContainer = document.getElementById('debts-amortization-container');
+        if (state.debts.length === 0) {
+            debtContainer.innerHTML = "<p>Aucune dette.</p>";
+        } else {
+            let html = `<table><thead><tr><th>Dette</th><th>Restant Dû</th><th>Mensualité</th><th>Taux</th><th>Progression</th></tr></thead><tbody>`;
+            state.debts.forEach(d => {
+                if (d.remaining > 0) {
+                    let pct = ((d.total - d.remaining) / d.total) * 100;
+                    html += `
+                        <tr>
+                            <td><strong>${d.name}</strong></td>
+                            <td>${formatMoney(d.remaining)}</td>
+                            <td>${formatMoney(d.monthlyPayment)}</td>
+                            <td>${(d.rate*100).toFixed(1)}%</td>
+                            <td>
+                                <div class="debt-progress-bar"><div class="debt-fill" style="width:${pct}%"></div></div>
+                                <small>${pct.toFixed(1)}% remboursé</small>
+                            </td>
+                        </tr>
+                    `;
+                }
+            });
+            html += "</tbody></table>";
+            debtContainer.innerHTML = html;
+        }
+
+        // Mise à jour Onglet Détails Financiers
+        const financeContainer = document.getElementById('finance-details-container');
+        if (state.lastMonthData) {
+            const d = state.lastMonthData.details;
+            let empHtml = d.employees.map(e => `<div class="detail-row"><span>${e.role}</span><span>Brut: ${formatMoney(e.brut)} | Chg: ${formatMoney(e.charges)}</span></div>`).join('');
+            
+            let mgrHtml = d.manager ? `<div class="detail-row"><span>Manager (${d.manager.level})</span><span>Brut: ${formatMoney(d.manager.brut)} | Chg: ${formatMoney(d.manager.charges)}</span></div>` : '<div class="detail-row"><span>Aucun manager</span><span>-</span></div>';
+            
+            let dirHtml = d.director ? `<div class="detail-row"><span>Dirigeant (${d.director.status})</span><span>Brut: ${formatMoney(d.director.brut)} | Chg: ${formatMoney(d.director.charges)}</span></div>` : '<div class="detail-row"><span>Pas de salaire</span><span>-</span></div>';
+
+            let debtHtml = d.debts.map(db => `<div class="detail-row"><span>${db.name}</span><span>Int: ${formatMoney(db.interest)} | Cap: ${formatMoney(db.capital)}</span></div>`).join('');
+
+            financeContainer.innerHTML = `
+                <div class="finance-detail-grid">
+                    <div class="detail-box">
+                        <h4>👥 Masse Salariale Employés</h4>
+                        ${empHtml}
+                        <div class="detail-row total"><span>Total Employés</span><span>${formatMoney(d.employees.reduce((a,b)=>a+b.total,0))}</span></div>
+                    </div>
+                    <div class="detail-box">
+                        <h4>👔 Direction & Management</h4>
+                        ${mgrHtml}
+                        ${dirHtml}
+                    </div>
+                    <div class="detail-box">
+                        <h4>💳 Remboursement Dettes (Ce mois)</h4>
+                        ${debtHtml}
+                    </div>
+                    <div class="detail-box">
+                        <h4>🏭 Charges d'Exploitation</h4>
+                        <div class="detail-row"><span>Loyer, Stock, Énergie...</span><span>${formatMoney(state.lastMonthData.opex)}</span></div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    function showReport(data) {
+        const area = document.getElementById('report-area');
+        area.innerHTML = `
+            <div class="card" style="background:#eff6ff; border-left:4px solid #3b82f6">
+                <h3>📋 Résumé Mensuel - ${MONTHS[state.month-1]} ${state.year}</h3>
+                <div class="detail-row"><span>Chiffre d'Affaires</span><span class="positive">+${formatMoney(data.rev)}</span></div>
+                <div class="detail-row"><span>Charges Totales</span><span class="negative">-${formatMoney(data.chg)}</span></div>
+                <div class="detail-row total"><span>Bénéfice Net</span><span>${formatMoney(data.prof)}</span></div>
+                <p style="font-size:0.8em; color:#64748b; margin-top:10px;">Voir l'onglet "Détails Financiers" pour le détail des salaires et l'onglet "Dettes" pour l'amortissement.</p>
+            </div>
+        `;
+    }
+
+    // --- UTILITAIRES ---
+    function switchTab(id) {
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('tab-' + id).classList.add('active');
+        event.target.classList.add('active');
+    }
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+    function openManagerModal() { document.getElementById('modal-manager').classList.add('open'); }
+    function openSalaryModal() { document.getElementById('modal-salary').classList.add('open'); }
+    function formatMoney(amount) { return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(amount); }
+    function saveState() { localStorage.setItem('simV12', JSON.stringify(state)); }
+
+    init();
+</script>
+
+</body>
+</html>
