@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulateur v8 - Empire Builder Corrigé</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #e2e8f0;
+            padding: 10px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: #f8fafc;
+            color: #334155;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .header h1 { font-size: 1.6em; margin-bottom: 5px; }
+        .header p { font-size: 0.9em; opacity: 0.9; }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 10px;
+            padding: 15px;
+            background: #f1f5f9;
+        }
+        .stat-card {
+            background: white;
+            padding: 12px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-left: 4px solid #0d9488;
+        }
+        .stat-card h3 { font-size: 0.65em; color: #64748b; text-transform: uppercase; margin-bottom: 4px; }
+        .stat-card .value { font-size: 1.1em; font-weight: bold; color: #0f766e; word-break: break-word; }
+        .stat-card .change { font-size: 0.65em; color: #64748b; margin-top: 3px; }
+        .stat-card.negative .value { color: #dc2626; }
+        .stat-card.warning { border-left-color: #f59e0b; }
+        .stat-card.warning .value { color: #d97706; }
+        .stat-card.synergy { border-left-color: #8b5cf6; background: #faf5ff; }
+        .stat-card.synergy .value { color: #7c3aed; }
+
+        .tabs {
+            display: flex;
+            background: #e2e8f0;
+            padding: 8px;
+            gap: 5px;
+            overflow-x: auto;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 8px;
+            background: white;
+            border: 2px solid #cbd5e1;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.75em;
+            font-weight: 600;
+            color: #64748b;
+            white-space: nowrap;
+            min-width: 80px;
+        }
+        .tab-btn.active {
+            background: #0d9488;
+            color: white;
+            border-color: #0d9488;
+        }
+
+        .main-content { padding: 15px; }
+        .panel {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 15px;
+        }
+        .panel h2 {
+            color: #0f766e;
+            margin-bottom: 12px;
+            font-size: 1.15em;
+            border-bottom: 2px solid #0d9488;
+            padding-bottom: 6px;
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .event-card {
+            background: #f0fdfa;
+            border-left: 4px solid #0d9488;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+        }
+        .event-card h3 { color: #0f766e; margin-bottom: 6px; font-size: 1em; }
+        .event-card p { line-height: 1.4; margin-bottom: 6px; font-size: 0.88em; }
+        .event-impact {
+            font-weight: bold;
+            padding: 6px;
+            border-radius: 6px;
+            font-size: 0.85em;
+            margin: 6px 0;
+        }
+        .event-impact.positive { color: #166534; background: #dcfce7; }
+        .event-impact.negative { color: #991b1b; background: #fee2e2; }
+
+        .advice-box {
+            background: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            padding: 10px;
+            margin-top: 8px;
+            border-radius: 6px;
+            font-size: 0.85em;
+        }
+        .advice-box h4 { color: #b45309; margin-bottom: 5px; font-size: 0.9em; }
+
+        .action-btn {
+            display: block;
+            width: 100%;
+            background: #0d9488;
+            color: white;
+            border: none;
+            padding: 10px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85em;
+            margin-top: 6px;
+            text-align: left;
+            transition: all 0.2s;
+        }
+        .action-btn:hover { background: #0f766e; transform: translateX(3px); }
+        .action-btn.secondary { background: #64748b; }
+        .action-btn.secondary:hover { background: #475569; }
+        .action-btn:disabled { background: #cbd5e1; color: #64748b; cursor: not-allowed; transform: none; }
+        .action-btn .impact { display: block; font-size: 0.8em; opacity: 0.9; margin-top: 3px; }
+
+        .company-card {
+            background: #f8fafc;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            border-left: 4px solid #0d9488;
+        }
+        .company-card h4 { color: #0f766e; margin-bottom: 6px; font-size: 0.95em; }
+        .company-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px;
+            font-size: 0.78em;
+        }
+        .company-stats div { display: flex; justify-content: space-between; padding: 2px 0; border-bottom: 1px dashed #e2e8f0; }
+        
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.7em;
+            font-weight: bold;
+            margin-top: 4px;
+            margin-left: 4px;
+        }
+        .badge.sasu { background: #dbeafe; color: #1e40af; }
+        .badge.eurl { background: #dcfce7; color: #166534; }
+        .badge.holding { background: #f3e8ff; color: #6b21a8; }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: white;
+            color: #334155;
+            padding: 20px;
+            border-radius: 16px;
+            max-width: 650px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-content h2 { color: #0f766e; margin-bottom: 12px; font-size: 1.2em; }
+        .pedagogical-card {
+            background: #fffbeb;
+            border-left: 4px solid #f59e0b;
+            padding: 12px;
+            margin: 12px 0;
+            border-radius: 8px;
+        }
+        .pedagogical-card h3 { color: #b45309; margin-bottom: 6px; font-size: 1em; }
+        .pedagogical-card p { line-height: 1.4; margin-bottom: 6px; font-size: 0.88em; }
+        .close-btn {
+            background: #0f766e;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        .next-month-btn {
+            background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+            color: white;
+            border: none;
+            padding: 14px 30px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: bold;
+            margin: 15px auto;
+            display: block;
+            width: calc(100% - 30px);
+            max-width: 400px;
+        }
+        .next-month-btn:hover { transform: scale(1.02); box-shadow: 0 8px 16px rgba(0,0,0,0.2); }
+
+        .chart-container {
+            background: white;
+            padding: 15px;
+            margin: 0 15px 15px 15px;
+            border-radius: 12px;
+        }
+        .chart-container h2 { color: #0f766e; margin-bottom: 10px; font-size: 1.1em; }
+
+        .report-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            font-size: 0.82em;
+        }
+        .report-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            border-bottom: 1px dashed #cbd5e1;
+        }
+        .report-item.total {
+            font-weight: bold;
+            border-top: 2px solid #0f766e;
+            border-bottom: none;
+            padding-top: 6px;
+            margin-top: 4px;
+            color: #0f766e;
+        }
+
+        /* HISTORIQUE MENSUEL */
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8em;
+            margin-top: 10px;
+        }
+        .history-table th {
+            background: #0f766e;
+            color: white;
+            padding: 8px;
+            text-align: left;
+        }
+        .history-table td {
+            padding: 6px 8px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .history-table tr:nth-child(even) { background: #f8fafc; }
+        .history-table .positive { color: #166534; font-weight: bold; }
+        .history-table .negative { color: #dc2626; font-weight: bold; }
+
+        .employee-list {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 8px;
+            font-size: 0.82em;
+        }
+        .employee-list h5 { color: #166534; margin-bottom: 6px; }
+        .employee-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 0;
+            border-bottom: 1px dashed #bbf7d0;
+        }
+
+        @media (max-width: 640px) {
+            .dashboard { grid-template-columns: 1fr 1fr; gap: 6px; padding: 10px; }
+            .stat-card { padding: 8px; }
+            .stat-card .value { font-size: 0.95em; }
+            .tab-btn { font-size: 0.7em; min-width: 70px; padding: 6px; }
+            .main-content { padding: 10px; }
+            .panel { padding: 12px; }
+            .report-grid { grid-template-columns: 1fr; }
+            .company-stats { grid-template-columns: 1fr; }
+            .history-table { font-size: 0.7em; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏛️ Simulateur v8 - Empire Builder</h1>
+            <p>Version corrigée • Salaires réels • Historique mensuel • Dettes évolutives</p>
+        </div>
+
+        <div class="dashboard">
+            <div class="stat-card">
+                <h3>💰 Trésorerie</h3>
+                <div class="value" id="treasury">0 €</div>
+                <div class="change" id="treasury-change">+0 € ce mois</div>
+            </div>
+            <div class="stat-card">
+                <h3>📊 CA Mensuel</h3>
+                <div class="value" id="monthly-revenue">0 €</div>
+                <div class="change" id="revenue-change">Cumul : 0 €</div>
+            </div>
+            <div class="stat-card negative">
+                <h3>💸 Charges Mensuelles</h3>
+                <div class="value" id="monthly-charges">0 €</div>
+                <div class="change" id="charges-detail">Détail à venir</div>
+            </div>
+            <div class="stat-card">
+                <h3>👥 Masse Salariale</h3>
+                <div class="value" id="payroll-cost">0 €</div>
+                <div class="change" id="payroll-detail">0 employés</div>
+            </div>
+            <div class="stat-card">
+                <h3>📅 Période</h3>
+                <div class="value" id="current-date">Jan 2026</div>
+                <div class="change" id="companies-count">0 entreprise(s)</div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('events')">📅 Événements</button>
+            <button class="tab-btn" onclick="switchTab('history')">📊 Historique</button>
+            <button class="tab-btn" onclick="switchTab('actions')">⚡ Stratégie</button>
+            <button class="tab-btn" onclick="switchTab('companies')">🏢 Filiales</button>
+            <button class="tab-btn" onclick="switchTab('holding')">👑 Holding</button>
+            <button class="tab-btn" onclick="switchTab('debts')">💳 Dettes</button>
+        </div>
+
+        <div class="main-content">
+            <div class="panel">
+                <div class="tab-content active" id="events-content">
+                    <h2>📅 Événements & Rapport du Mois</h2>
+                    <div id="events-container">
+                        <div class="event-card">
+                            <h3>🎯 Bienvenue dans la simulation v8 !</h3>
+                            <p>Cette version corrige tous les bugs précédents : les salaires sont réellement comptabilisés, l'apport de 30 000 € est déduit à l'achat, et un <strong>historique mensuel</strong> vous permet de suivre l'évolution.</p>
+                            <p style="margin-top:10px; font-weight:bold; color:#0f766e;">Cliquez sur "Mois Suivant" pour lancer votre première acquisition.</p>
+                        </div>
+                    </div>
+                    <div id="report-container"></div>
+                </div>
+
+                <div class="tab-content" id="history-content">
+                    <h2>📊 Historique Mensuel</h2>
+                    <p style="font-size:0.85em; color:#64748b; margin-bottom:10px;">Suivez l'évolution mois par mois de votre empire.</p>
+                    <div id="history-container">
+                        <p style="color:#64748b; text-align:center;">Aucune donnée. Cliquez sur "Mois Suivant" pour commencer.</p>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="actions-content">
+                    <h2>⚡ Leviers Stratégiques</h2>
+                    <div id="actions-list"></div>
+                </div>
+
+                <div class="tab-content" id="companies-content">
+                    <h2>🏢 Filiales & Équipes</h2>
+                    <div id="companies-container">
+                        <p style="color:#64748b; text-align:center;">Aucune entreprise acquise</p>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="holding-content">
+                    <h2>👑 Holding</h2>
+                    <div id="holding-container">
+                        <p style="color:#64748b; text-align:center;">Aucune holding créée</p>
+                    </div>
+                </div>
+
+                <div class="tab-content" id="debts-content">
+                    <h2>💳 Dettes & Remboursements</h2>
+                    <div id="debts-container">
+                        <p style="color:#64748b; text-align:center;">Aucune dette</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h2>📈 Évolution de la Trésorerie</h2>
+            <canvas id="treasuryChart"></canvas>
+        </div>
+
+        <button class="next-month-btn" id="next-month-btn">▶ Mois Suivant</button>
+    </div>
+
+    <div class="modal" id="pedagogical-modal">
+        <div class="modal-content">
+            <div class="pedagogical-card">
+                <h3 id="modal-title">Concept</h3>
+                <div id="modal-content"></div>
+            </div>
+            <button class="close-btn" onclick="closeModal('pedagogical-modal')">Fermer</button>
+        </div>
+    </div>
+
+    <div class="modal" id="salary-modal">
+        <div class="modal-content">
+            <h2>💰 Optimisation Rémunération</h2>
+            <p style="font-size:0.9em; margin-bottom:10px; color:#64748b;">Choisissez votre palier social 2026 :</p>
+            <div id="salary-options"></div>
+            <button class="close-btn" onclick="closeModal('salary-modal')">Fermer</button>
+        </div>
+    </div>
+
+    <script>
+        console.log("✅ Simulateur v8 chargé");
+
+        // ========== ÉTAT DU JEU ==========
+        let gameState = {
+            month: 0,
+            year: 2026,
+            currentMonth: 1,
+            treasury: 30000,
+            totalRevenue: 0,
+            totalProfit: 0,
+            totalTaxesPaid: 0,
+            companies: [],
+            debts: [],
+            treasuryHistory: [30000],
+            monthHistory: [], // NOUVEAU : historique mensuel
+            currentYearProfit: 0,
+            acquisitionsCompleted: 0,
+            holdingCreated: false,
+            holdingType: null,
+            integrationFiscale: false,
+            managementFeesActive: false,
+            sharedManagerActive: false,
+            salaryLevel: 'none',
+            alternativeBenefits: 0,
+            acreActive: false,
+            lastMonthCharges: 0,
+            lastMonthRevenue: 0
+        };
+
+        const PALIERS_SOCIAUX = {
+            palier1: { name: "Palier 1 : Minimum Retraite", brutMensuel: 601, netMensuel: 470 },
+            palier2: { name: "Palier 2 : Plafond IJ Maladie", brutMensuel: 2126, netMensuel: 1660 },
+            palier3: { name: "Palier 3 : Plafond SS", brutMensuel: 4000, netMensuel: 3100 }
+        };
+
+        const acquisitionPath = [
+            {
+                name: "Jardinerie Enseigne Nationale",
+                location: "Le Mans (72)",
+                price: 450000,
+                type: "fonds_commerce",
+                baseMonthlyRevenue: 93750,
+                baseOperatingCharges: 25000,
+                initialEmployees: [
+                    { role: "Vendeur conseil", grossSalary: 2100 },
+                    { role: "Employé polyvalent", grossSalary: 1800 },
+                    { role: "Chef d'équipe", grossSalary: 2800 },
+                    { role: "Caissier", grossSalary: 1800 }
+                ],
+                month: 1
+            },
+            {
+                name: "Espaces Verts Ariège",
+                location: "Ariège (09)",
+                price: 320000,
+                type: "parts_sociales",
+                baseMonthlyRevenue: 37500,
+                baseOperatingCharges: 12000,
+                initialEmployees: [
+                    { role: "Ouvrier paysagiste", grossSalary: 2200 },
+                    { role: "Ouvrier paysagiste", grossSalary: 2200 },
+                    { role: "Chef d'équipe", grossSalary: 2800 }
+                ],
+                month: 13
+            }
+        ];
+
+        // ========== CALCULS PURS (ne modifient pas l'état) ==========
+        
+        function calculateIS(globalProfit, useIntegration, nbCompanies) {
+            if (globalProfit <= 0) return 0;
+            const threshold = useIntegration ? 42500 : 42500 * Math.max(1, nbCompanies);
+            if (globalProfit <= threshold) return globalProfit * 0.15;
+            return (threshold * 0.15) + ((globalProfit - threshold) * 0.25);
+        }
+
+        function computeMonthlyData() {
+            // Calcule TOUTES les données du mois sans modifier l'état
+            let revenue = 0;
+            let synergyBoost = (gameState.holdingCreated && gameState.companies.length >= 2) ? 1.05 : 1.0;
+            
+            gameState.companies.forEach(c => { revenue += c.baseMonthlyRevenue; });
+            revenue *= synergyBoost;
+
+            let operating = 0;
+            let employeesGross = 0;
+            let employeesCharges = 0;
+            let totalEmployees = 0;
+
+            let synergyReduction = (gameState.holdingCreated && gameState.companies.length >= 2) ? 0.97 : 1.0;
+
+            gameState.companies.forEach(c => {
+                operating += c.baseOperatingCharges;
+                if (c.employees) {
+                    c.employees.forEach(emp => {
+                        employeesGross += emp.grossSalary;
+                        employeesCharges += emp.grossSalary * 0.45;
+                        totalEmployees++;
+                    });
+                }
+            });
+            operating *= synergyReduction;
+
+            // Management fees
+            let managementFees = 0;
+            if (gameState.holdingCreated && gameState.managementFeesActive) {
+                managementFees = revenue * 0.05;
+                operating += managementFees;
+            }
+
+            // Directeur de groupe
+            let directorSalary = 0;
+            let directorCharges = 0;
+            if (gameState.holdingCreated && gameState.sharedManagerActive) {
+                directorSalary = 6000;
+                directorCharges = 6000 * 0.80;
+            }
+
+            // Rémunération dirigeant personnel
+            let personalSalary = 0;
+            let personalCharges = 0;
+            if (gameState.salaryLevel !== 'none' && gameState.companies.length > 0) {
+                const firstCompany = gameState.companies[0];
+                const isEURL = firstCompany.legalStatus === 'EURL';
+                personalSalary = PALIERS_SOCIAUX[gameState.salaryLevel].brutMensuel;
+                personalCharges = isEURL ? personalSalary * 0.45 : personalSalary * 0.80;
+                if (gameState.acreActive) personalCharges *= 0.75;
+            }
+
+            // Dettes
+            let debtCapital = 0;
+            let debtInterests = 0;
+            gameState.debts.forEach(d => {
+                if (d.remainingMonths > 0) {
+                    debtCapital += d.monthlyCapitalPayment;
+                    debtInterests += d.monthlyInterest;
+                }
+            });
+
+            const totalCharges = operating + employeesGross + employeesCharges + 
+                                directorSalary + directorCharges + personalSalary + personalCharges +
+                                debtCapital + debtInterests;
+
+            const payrollCost = employeesGross + employeesCharges + directorSalary + directorCharges + personalSalary + personalCharges;
+
+            return {
+                revenue,
+                operating,
+                employeesGross,
+                employeesCharges,
+                totalEmployees,
+                managementFees,
+                directorSalary,
+                directorCharges,
+                personalSalary,
+                personalCharges,
+                debtCapital,
+                debtInterests,
+                totalCharges,
+                payrollCost,
+                profit: revenue - totalCharges
+            };
+        }
+
+        // ========== FONCTION PRINCIPALE : MOIS SUIVANT ==========
+        
+        function advanceMonth() {
+            console.log("🔄 Avancement du mois...");
+            
+            gameState.month++;
+            gameState.currentMonth++;
+            
+            let yearEndFiscal = false;
+            if (gameState.currentMonth > 12) {
+                yearEndFiscal = true;
+                gameState.currentMonth = 1;
+                gameState.year++;
+            }
+
+            // 1. Vérifier acquisition programmée
+            checkAcquisitions();
+
+            // 2. Calculer les données du mois
+            const data = computeMonthlyData();
+            
+            // 3. Mettre à jour les totaux
+            gameState.totalRevenue += data.revenue;
+            gameState.currentYearProfit += data.profit;
+            gameState.totalProfit += data.profit;
+            gameState.treasury += data.profit;
+            gameState.treasury += gameState.alternativeBenefits;
+            gameState.lastMonthCharges = data.totalCharges;
+            gameState.lastMonthRevenue = data.revenue;
+
+            // 4. CFE en décembre
+            let cfeAmount = 0;
+            if (gameState.currentMonth === 12 && gameState.companies.length > 0) {
+                cfeAmount = 400 * gameState.companies.length;
+                gameState.treasury -= cfeAmount;
+                gameState.currentYearProfit -= cfeAmount;
+            }
+
+            // 5. IS en fin d'année
+            let isAmount = 0;
+            if (yearEndFiscal) {
+                isAmount = calculateIS(gameState.currentYearProfit, gameState.integrationFiscale, gameState.companies.length);
+                gameState.treasury -= isAmount;
+                gameState.totalTaxesPaid += isAmount;
+            }
+
+            // 6. Rembourser les dettes (ÉVOLUTION RÉELLE)
+            gameState.debts.forEach(debt => {
+                if (debt.remainingMonths > 0) {
+                    debt.remainingCapital -= debt.monthlyCapitalPayment;
+                    if (debt.remainingCapital < 0) debt.remainingCapital = 0;
+                    debt.monthlyInterest = (debt.remainingCapital * debt.annualRate) / 12;
+                    debt.remainingMonths--;
+                }
+            });
+            gameState.debts = gameState.debts.filter(d => d.remainingMonths > 0 && d.remainingCapital > 0);
+
+            // 7. Enregistrer dans l'historique
+            gameState.monthHistory.push({
+                month: gameState.currentMonth,
+                year: gameState.year,
+                revenue: data.revenue,
+                charges: data.totalCharges,
+                profit: data.profit,
+                treasury: gameState.treasury,
+                payroll: data.payrollCost,
+                debtPayment: data.debtCapital + data.debtInterests,
+                isPaid: yearEndFiscal ? isAmount : 0,
+                cfePaid: cfeAmount,
+                employees: data.totalEmployees
+            });
+
+            gameState.treasuryHistory.push(gameState.treasury);
+
+            // 8. Réinitialiser le bénéfice annuel si fin d'année
+            if (yearEndFiscal) {
+                gameState.currentYearProfit = 0;
+            }
+
+            // 9. Générer événement
+            generateEvent();
+
+            // 10. Afficher le rapport
+            generateMonthlyReport(data, isAmount, cfeAmount, yearEndFiscal);
+
+            // 11. Mettre à jour toute l'interface
+            renderAll();
+            updateChart();
+            saveGameState();
+        }
+
+        document.getElementById('next-month-btn').addEventListener('click', advanceMonth);
+
+        // ========== AFFICHAGE (ne modifie PAS l'état) ==========
+        
+        function renderAll() {
+            renderDashboard();
+            renderCompaniesPanel();
+            renderHoldingPanel();
+            renderDebtsPanel();
+            renderActionsPanel();
+            renderHistoryPanel();
+        }
+
+        function renderDashboard() {
+            const data = computeMonthlyData();
+            const treasuryChange = gameState.treasuryHistory.length > 1 
+                ? gameState.treasury - gameState.treasuryHistory[gameState.treasuryHistory.length - 2]
+                : 0;
+
+            document.getElementById('treasury').textContent = formatMoney(gameState.treasury);
+            document.getElementById('treasury-change').textContent = 
+                (treasuryChange >= 0 ? '+' : '') + formatMoney(treasuryChange) + ' ce mois';
+            
+            document.getElementById('monthly-revenue').textContent = formatMoney(data.revenue);
+            document.getElementById('revenue-change').textContent = 'Cumul : ' + formatMoney(gameState.totalRevenue);
+            
+            document.getElementById('monthly-charges').textContent = formatMoney(data.totalCharges);
+            document.getElementById('charges-detail').textContent = 
+                `Exploitation: ${formatMoney(data.operating)} | Dettes: ${formatMoney(data.debtCapital + data.debtInterests)}`;
+            
+            document.getElementById('payroll-cost').textContent = formatMoney(data.payrollCost);
+            document.getElementById('payroll-detail').textContent = 
+                `${data.totalEmployees} employés | Brut: ${formatMoney(data.employeesGross + data.directorSalary + data.personalSalary)}`;
+            
+            document.getElementById('current-date').textContent = getMonthName(gameState.currentMonth) + ' ' + gameState.year;
+            document.getElementById('companies-count').textContent = gameState.companies.length + ' entreprise(s)';
+        }
+
+        function renderCompaniesPanel() {
+            const container = document.getElementById('companies-container');
+            if (gameState.companies.length === 0) {
+                container.innerHTML = '<p style="color:#64748b; text-align:center;">Aucune entreprise acquise</p>';
+                return;
+            }
+
+            container.innerHTML = gameState.companies.map((c, idx) => {
+                const statusBadge = c.legalStatus === 'EURL' 
+                    ? '<span class="badge eurl">EURL (TNS)</span>' 
+                    : '<span class="badge sasu">SASU (Assimilé)</span>';
+                
+                const empCost = c.employees.reduce((sum, e) => sum + (e.grossSalary * 1.45), 0);
+                const empGross = c.employees.reduce((sum, e) => sum + e.grossSalary, 0);
+                
+                const employeeListHtml = c.employees.map(emp => `
+                    <div class="employee-item">
+                        <span>${emp.role}</span>
+                        <span><strong>${formatMoney(emp.grossSalary)}</strong> brut + ${formatMoney(emp.grossSalary * 0.45)} charges</span>
+                    </div>
+                `).join('');
+
+                return `
+                    <div class="company-card">
+                        <h4>${c.name} ${statusBadge}</h4>
+                        <p style="font-size:0.8em; color:#64748b; margin-bottom:6px;">${c.location} • ${c.type === 'fonds_commerce' ? 'Fonds de commerce' : 'Parts sociales'}</p>
+                        <div class="company-stats">
+                            <div><span>CA/mois:</span> <strong>${formatMoney(c.baseMonthlyRevenue)}</strong></div>
+                            <div><span>Charges exploi.:</span> <strong>${formatMoney(c.baseOperatingCharges)}</strong></div>
+                            <div><span>Employés:</span> <strong>${c.employees.length}</strong></div>
+                            <div><span>Masse salariale:</span> <strong>${formatMoney(empCost)}</strong></div>
+                        </div>
+                        <div class="employee-list">
+                            <h5>👥 Équipe détaillée</h5>
+                            ${employeeListHtml}
+                            <div class="employee-item" style="font-weight:bold; border-top:2px solid #166534; margin-top:5px; padding-top:5px;">
+                                <span>TOTAL</span>
+                                <span>Brut: ${formatMoney(empGross)} | Charges: ${formatMoney(empGross * 0.45)} | Coût total: ${formatMoney(empCost)}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderHoldingPanel() {
+            const container = document.getElementById('holding-container');
+            if (!gameState.holdingCreated) {
+                container.innerHTML = `
+                    <div class="event-card" style="border-left-color:#8b5cf6; background:#faf5ff;">
+                        <h3>👑 Créer une Holding Animatrice</h3>
+                        <p>Une holding animatrice facture des management fees à ses filiales, récupère la TVA et évite la taxe sur les salaires.</p>
+                        <button class="action-btn" onclick="createHolding()">Créer la Holding (Coût: 2 000 €)</button>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="company-card" style="border-left-color:#8b5cf6;">
+                    <h4>Holding ${gameState.holdingType} <span class="badge holding">Animatrice</span></h4>
+                    <p style="font-size:0.8em; color:#64748b; margin-bottom:6px;">Détient ${gameState.companies.length} filiale(s)</p>
+                    <div class="company-stats">
+                        <div><span>Régime Mère-Fille:</span> <strong style="color:#166534;">Actif (95% exonéré)</strong></div>
+                        <div><span>Intégration Fiscale:</span> <strong style="color:${gameState.integrationFiscale ? '#dc2626' : '#166534'};">${gameState.integrationFiscale ? 'ON' : 'OFF'}</strong></div>
+                    </div>
+                    <button class="action-btn ${gameState.managementFeesActive ? 'secondary' : ''}" onclick="toggleManagementFees()">
+                        ${gameState.managementFeesActive ? '❌ Arrêter Management Fees' : '✅ Activer Management Fees (5% du CA)'}
+                    </button>
+                    <button class="action-btn ${gameState.sharedManagerActive ? 'secondary' : ''}" onclick="toggleSharedManager()">
+                        ${gameState.sharedManagerActive ? '❌ Supprimer Directeur Groupe' : '✅ Recruter Directeur Groupe (6000€/mois)'}
+                    </button>
+                    <button class="action-btn secondary" onclick="toggleIntegrationFiscale()">
+                        ${gameState.integrationFiscale ? '❌ Désactiver Intégration Fiscale' : '✅ Activer Intégration Fiscale'}
+                    </button>
+                </div>
+            `;
+        }
+
+        function renderDebtsPanel() {
+            const container = document.getElementById('debts-container');
+            if (gameState.debts.length === 0) {
+                container.innerHTML = '<p style="color:#64748b; text-align:center;">Aucune dette</p>';
+                return;
+            }
+
+            let totalRemaining = 0;
+            let totalMonthly = 0;
+            gameState.debts.forEach(d => {
+                totalRemaining += d.remainingCapital;
+                totalMonthly += d.monthlyCapitalPayment + d.monthlyInterest;
+            });
+
+            let html = `
+                <div class="company-card" style="border-left-color:#0f766e; background:#f0fdfa;">
+                    <h4 style="color:#0f766e;">💼 Total Dettes</h4>
+                    <div class="company-stats">
+                        <div><span>Capital restant:</span> <strong>${formatMoney(totalRemaining)}</strong></div>
+                        <div><span>Mensualité totale:</span> <strong>${formatMoney(totalMonthly)}</strong></div>
+                    </div>
+                </div>
+            `;
+
+            html += gameState.debts.map(d => {
+                const progress = ((d.totalAmount - d.remainingCapital) / d.totalAmount) * 100;
+                const paid = d.totalAmount - d.remainingCapital;
+                return `
+                    <div class="company-card" style="border-left-color:#f59e0b;">
+                        <h4 style="color:#b45309;">${d.type}</h4>
+                        <div class="company-stats">
+                            <div><span>Capital initial:</span> <strong>${formatMoney(d.totalAmount)}</strong></div>
+                            <div><span>Déjà remboursé:</span> <strong style="color:#166534;">${formatMoney(paid)}</strong></div>
+                            <div><span>Reste à payer:</span> <strong style="color:#dc2626;">${formatMoney(d.remainingCapital)}</strong></div>
+                            <div><span>Mensualité:</span> <strong>${formatMoney(d.monthlyCapitalPayment + d.monthlyInterest)}</strong></div>
+                            <div><span>Dont intérêts:</span> <strong>${formatMoney(d.monthlyInterest)}</strong></div>
+                            <div><span>Mois restants:</span> <strong>${d.remainingMonths}</strong></div>
+                        </div>
+                        <div style="background:#e5e7eb; height:8px; border-radius:4px; margin-top:8px; overflow:hidden;">
+                            <div style="background:#10b981; height:100%; width:${progress}%; transition:width 0.3s;"></div>
+                        </div>
+                        <div style="font-size:0.75em; color:#64748b; margin-top:4px; text-align:right;">
+                            ${progress.toFixed(1)}% remboursé
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
+        }
+
+        function renderActionsPanel() {
+            const container = document.getElementById('actions-list');
+            if (gameState.companies.length === 0) {
+                container.innerHTML = '<p style="color:#64748b; text-align:center;">Acquérez une entreprise pour accéder aux leviers.</p>';
+                return;
+            }
+
+            const firstCompany = gameState.companies[0];
+            const isEURL = firstCompany.legalStatus === 'EURL';
+            const currentNet = gameState.salaryLevel !== 'none' ? PALIERS_SOCIAUX[gameState.salaryLevel].netMensuel : 0;
+
+            container.innerHTML = `
+                <div class="event-card">
+                    <h3>💰 Ma Rémunération de Dirigeant</h3>
+                    <p>Statut : <strong>${isEURL ? 'EURL (TNS, charges ~45%)' : 'SASU (Assimilé, charges ~80%)'}</strong></p>
+                    <p style="font-size:0.85em; color:#64748b; margin-bottom:10px;">
+                        Net actuel : <strong>${formatMoney(currentNet)}/mois</strong>
+                    </p>
+                    <button class="action-btn" onclick="openSalaryModal()">⚙️ Choisir mon palier de rémunération</button>
+                </div>
+
+                <div class="event-card">
+                    <h3>🎁 Avantages en nature</h3>
+                    <p style="font-size:0.85em;">CESU, Loyer du siège, Chèques vacances. Net d'impôt et de charges.</p>
+                    <button class="action-btn secondary" onclick="applyAlternativeBenefits()">
+                        ✅ Activer (+200€/mois net)
+                    </button>
+                </div>
+
+                ${!gameState.acreActive ? `
+                <div class="event-card" style="border-left-color:#f59e0b;">
+                    <h3>📝 Demande ACRE (45 jours)</h3>
+                    <p>Réduction de 25% des cotisations TNS la 1ère année.</p>
+                    <button class="action-btn" onclick="applyAcre()">📩 Déposer le dossier ACRE</button>
+                </div>
+                ` : '<div class="event-card" style="border-left-color:#166534;"><h3>✅ ACRE active</h3><p>Réduction de 25% appliquée ce mois.</p></div>'}
+            `;
+        }
+
+        function renderHistoryPanel() {
+            const container = document.getElementById('history-container');
+            if (gameState.monthHistory.length === 0) {
+                container.innerHTML = '<p style="color:#64748b; text-align:center;">Aucune donnée</p>';
+                return;
+            }
+
+            let html = `
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Période</th>
+                            <th>CA</th>
+                            <th>Charges</th>
+                            <th>Bénéfice</th>
+                            <th>Trésorerie</th>
+                            <th>👥</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            gameState.monthHistory.slice().reverse().forEach(m => {
+                const profitClass = m.profit >= 0 ? 'positive' : 'negative';
+                html += `
+                    <tr>
+                        <td>${getMonthName(m.month)} ${m.year}</td>
+                        <td>${formatMoney(m.revenue)}</td>
+                        <td>${formatMoney(m.charges)}</td>
+                        <td class="${profitClass}">${formatMoney(m.profit)}</td>
+                        <td>${formatMoney(m.treasury)}</td>
+                        <td>${m.employees}</td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        // ========== ACQUISITION ==========
+        
+        function checkAcquisitions() {
+            const idx = gameState.acquisitionsCompleted;
+            if (idx < acquisitionPath.length) {
+                const acq = acquisitionPath[idx];
+                if (gameState.month === acq.month || (gameState.month === 1 && gameState.year === 2026 && idx === 0)) {
+                    openAcquisitionModal(idx);
+                }
+            }
+        }
+
+        function openAcquisitionModal(index) {
+            const acq = acquisitionPath[index];
+            document.getElementById('modal-title').textContent = `🎯 Acquisition : ${acq.name}`;
+            
+            const empCost = acq.initialEmployees.reduce((sum, e) => sum + (e.grossSalary * 1.45), 0);
+            
+            document.getElementById('modal-content').innerHTML = `
+                <p><strong>Prix :</strong> ${formatMoney(acq.price)}</p>
+                <p><strong>CA mensuel :</strong> ${formatMoney(acq.baseMonthlyRevenue)}</p>
+                <p><strong>Charges exploitation :</strong> ${formatMoney(acq.baseOperatingCharges)}/mois</p>
+                <p><strong>Employés à reprendre :</strong> ${acq.initialEmployees.length} personnes</p>
+                <p><strong>Masse salariale totale :</strong> ${formatMoney(empCost)}/mois (brut + charges)</p>
+                <div class="advice-box">
+                    <h4>💰 Votre apport : 30 000 €</h4>
+                    <p>Cet apport sera déduit de votre trésorerie personnelle. Le reste est financé par crédit vendeur (40%), crédit d'honneur (20 000€) et emprunt bancaire.</p>
+                </div>
+                <h4 style="margin-top:15px; color:#0f766e;">Type d'acquisition :</h4>
+                <button class="action-btn secondary" onclick="selectAcqType('${acq.type}', ${index})" style="margin-bottom:8px;">
+                    ${acq.type === 'fonds_commerce' ? '✅ Fonds de commerce (Clean)' : '⚠️ Parts sociales (avec passif)'}
+                </button>
+            `;
+            document.getElementById('pedagogical-modal').classList.add('active');
+        }
+
+        function selectAcqType(type, index) {
+            const acq = acquisitionPath[index];
+            const warning = type === 'parts_sociales'
+                ? `<div class="advice-box"><h4>⚠️ Parts Sociales</h4><p>Vous reprenez le passif. Une Garantie de Passif est indispensable.</p></div>`
+                : `<div class="advice-box"><h4>✅ Fonds de Commerce</h4><p>Achat clean, sans passif. Salariés transférés automatiquement (Art. L.1224-1).</p></div>`;
+
+            document.getElementById('modal-content').innerHTML += `
+                ${warning}
+                <h4 style="margin:15px 0 10px 0; color:#0f766e;">Statut juridique :</h4>
+                <button class="action-btn secondary" onclick="finalizeAcquisition(${index}, '${type}', 'SASU')" style="margin-bottom:8px;">
+                    🏢 SASU (Assimilé salarié, charges ~80%)
+                </button>
+                <button class="action-btn secondary" onclick="finalizeAcquisition(${index}, '${type}', 'EURL')">
+                    🏢 EURL (TNS, charges ~45%)
+                </button>
+            `;
+        }
+
+        function finalizeAcquisition(index, type, legalStatus) {
+            const acq = acquisitionPath[index];
+            
+            // CORRECTION : Apport de 30 000€ TOUJOURS déduit
+            const apport = 30000;
+            const creditVendeur = acq.price * 0.40;
+            const creditHonneur = 20000;
+            const empruntBancaire = acq.price - apport - creditVendeur - creditHonneur;
+
+            console.log(`💰 Acquisition : Prix ${acq.price}, Apport ${apport}, CV ${creditVendeur}, CH ${creditHonneur}, EB ${empruntBancaire}`);
+
+            // CORRECTION : Copie profonde des employés
+            const company = {
+                name: acq.name,
+                location: acq.location,
+                price: acq.price,
+                type: type,
+                legalStatus: legalStatus,
+                baseMonthlyRevenue: acq.baseMonthlyRevenue,
+                baseOperatingCharges: acq.baseOperatingCharges,
+                employees: acq.initialEmployees.map(e => ({ ...e })), // COPIE PROFONDE
+                acquiredMonth: gameState.month
+            };
+
+            gameState.companies.push(company);
+
+            // Dettes
+            gameState.debts.push({
+                type: "Crédit Vendeur",
+                totalAmount: creditVendeur,
+                remainingCapital: creditVendeur,
+                monthlyCapitalPayment: creditVendeur / 84,
+                monthlyInterest: 0,
+                annualRate: 0,
+                remainingMonths: 84
+            });
+            gameState.debts.push({
+                type: "Crédit d'Honneur",
+                totalAmount: creditHonneur,
+                remainingCapital: creditHonneur,
+                monthlyCapitalPayment: creditHonneur / 84,
+                monthlyInterest: 0,
+                annualRate: 0,
+                remainingMonths: 84
+            });
+            gameState.debts.push({
+                type: "Emprunt Bancaire",
+                totalAmount: empruntBancaire,
+                remainingCapital: empruntBancaire,
+                monthlyCapitalPayment: empruntBancaire / 84,
+                monthlyInterest: (empruntBancaire * 0.045) / 12,
+                annualRate: 0.045,
+                remainingMonths: 84
+            });
+
+            // CORRECTION : Déduction explicite de l'apport
+            gameState.treasury -= apport;
+            gameState.treasuryHistory[gameState.treasuryHistory.length - 1] = gameState.treasury;
+            gameState.acquisitionsCompleted++;
+
+            closeModal('pedagogical-modal');
+            
+            showPedagogicalCard(
+                "✅ Acquisition réalisée !",
+                `Vous avez acquis ${acq.name} en ${legalStatus}.`,
+                `Apport personnel déduit : ${formatMoney(apport)}. Trésorerie restante : ${formatMoney(gameState.treasury)}. L'entreprise reprend ${company.employees.length} employés avec une masse salariale de ${formatMoney(company.employees.reduce((s,e) => s + e.grossSalary * 1.45, 0))}/mois.`
+            );
+
+            renderAll();
+        }
+
+        // ========== ACTIONS HOLDING & STRATÉGIE ==========
+        
+        function createHolding() {
+            if (gameState.treasury < 2000) {
+                alert("Trésorerie insuffisante (min. 2 000 €).");
+                return;
+            }
+            gameState.treasury -= 2000;
+            gameState.holdingCreated = true;
+            gameState.holdingType = gameState.companies[0].legalStatus === 'EURL' ? 'EURL' : 'SASU';
+            
+            showPedagogicalCard(
+                "👑 Holding créée",
+                "Votre holding animatrice est opérationnelle.",
+                "Régime Mère-Fille actif : 95% des dividendes remontés sont exonérés d'IS. Facturez des management fees à vos filiales pour récupérer la TVA et éviter la taxe sur les salaires."
+            );
+            renderAll();
+        }
+
+        function toggleIntegrationFiscale() {
+            gameState.integrationFiscale = !gameState.integrationFiscale;
+            showPedagogicalCard(
+                gameState.integrationFiscale ? "⚠️ Intégration Fiscale Activée" : "✅ Désactivée",
+                gameState.integrationFiscale 
+                    ? "Les résultats des filiales sont consolidés. Les pertes compensent les bénéfices."
+                    : "Chaque société est imposée séparément.",
+                gameState.integrationFiscale 
+                    ? "PIÈGE : Un seul plafond de 42 500€ à 15% pour tout le groupe. N'activez que si une filiale est en perte !"
+                    : "Chaque société a son propre plafond de 42 500€ à 15%."
+            );
+            renderAll();
+        }
+
+        function toggleManagementFees() {
+            gameState.managementFeesActive = !gameState.managementFeesActive;
+            showPedagogicalCard(
+                gameState.managementFeesActive ? "✅ Management Fees Activés" : "❌ Désactivés",
+                "La holding facture 5% du CA des filiales pour services RH/Compta.",
+                "Cela remonte de la trésorerie vers la holding légalement. Exige des prestations RÉELLES et une convention écrite."
+            );
+            renderAll();
+        }
+
+        function toggleSharedManager() {
+            gameState.sharedManagerActive = !gameState.sharedManagerActive;
+            showPedagogicalCard(
+                gameState.sharedManagerActive ? "✅ Directeur Groupe Activé" : "❌ Supprimé",
+                "Un seul Directeur de Groupe (6000€/mois) supervise toutes les filiales.",
+                `Économie : au lieu de ${formatMoney(4000 * 1.8 * gameState.companies.length)} pour des managers individuels, vous payez ${formatMoney(6000 * 1.8)} pour un seul directeur.`
+            );
+            renderAll();
+        }
+
+        function openSalaryModal() {
+            const firstCompany = gameState.companies[0];
+            const isEURL = firstCompany.legalStatus === 'EURL';
+
+            document.getElementById('salary-options').innerHTML = `
+                <button class="action-btn secondary" onclick="setSalary('none')" style="margin-bottom:8px;">
+                    🚫 Pas de salaire (0 €)
+                    <span class="impact">${isEURL ? 'Cotisations minimales TNS dues (~1000€/an)' : 'Maintien ARE intégral'}</span>
+                </button>
+                <button class="action-btn secondary" onclick="setSalary('palier1')" style="margin-bottom:8px;">
+                    📌 Palier 1 : ${formatMoney(PALIERS_SOCIAUX.palier1.brutMensuel)} brut → ${formatMoney(PALIERS_SOCIAUX.palier1.netMensuel)} net
+                    <span class="impact">Valide 4 trimestres retraite</span>
+                </button>
+                <button class="action-btn secondary" onclick="setSalary('palier2')" style="margin-bottom:8px;">
+                    🏥 Palier 2 : ${formatMoney(PALIERS_SOCIAUX.palier2.brutMensuel)} brut → ${formatMoney(PALIERS_SOCIAUX.palier2.netMensuel)} net
+                    <span class="impact">Maximise IJ maladie</span>
+                </button>
+                <button class="action-btn secondary" onclick="setSalary('palier3')">
+                    🏦 Palier 3 : ${formatMoney(PALIERS_SOCIAUX.palier3.brutMensuel)} brut → ${formatMoney(PALIERS_SOCIAUX.palier3.netMensuel)} net
+                    <span class="impact">Maximise retraite de base</span>
+                </button>
+            `;
+            document.getElementById('salary-modal').classList.add('active');
+        }
+
+        function setSalary(level) {
+            gameState.salaryLevel = level;
+            closeModal('salary-modal');
+            showPedagogicalCard(
+                "✅ Stratégie mise à jour",
+                `Niveau : ${level === 'none' ? 'Aucun salaire' : PALIERS_SOCIAUX[level].name}`,
+                "Optimisez avec les avantages en nature (CESU, Loyer) pour augmenter votre pouvoir d'achat net."
+            );
+            renderAll();
+        }
+
+        function applyAlternativeBenefits() {
+            gameState.alternativeBenefits = 250;
+            showPedagogicalCard(
+                "✅ Avantages activés",
+                "+250€/mois net via CESU et/ou loyer du siège social.",
+                "Déductible pour la société, net d'impôt pour vous."
+            );
+            renderAll();
+        }
+
+        function applyAcre() {
+            gameState.acreActive = true;
+            showPedagogicalCard(
+                "✅ ACRE déposé",
+                "Réduction de 25% des cotisations TNS pendant 12 mois.",
+                "Demande à faire dans les 45 jours suivant la création."
+            );
+            renderAll();
+        }
+
+        // ========== RAPPORT & ÉVÉNEMENTS ==========
+        
+        function generateMonthlyReport(data, isAmount, cfeAmount, yearEndFiscal) {
+            const container = document.getElementById('report-container');
+            const netDirigeant = gameState.salaryLevel !== 'none' ? PALIERS_SOCIAUX[gameState.salaryLevel].netMensuel : 0;
+            
+            let fiscalHtml = '';
+            if (yearEndFiscal) {
+                fiscalHtml = `
+                    <div class="report-item"><span>🏛️ IS payé:</span> <strong style="color:#dc2626">-${formatMoney(isAmount)}</strong></div>
+                `;
+            }
+            if (cfeAmount > 0) {
+                fiscalHtml += `<div class="report-item"><span>🏛️ CFE payée:</span> <strong style="color:#dc2626">-${formatMoney(cfeAmount)}</strong></div>`;
+            }
+
+            container.innerHTML = `
+                <div class="event-card" style="margin-top:15px; border-left-color:#3b82f6; background:#eff6ff;">
+                    <h3 style="color:#1e40af;">📋 Rapport Mensuel - ${getMonthName(gameState.currentMonth)} ${gameState.year}</h3>
+                    <div class="report-grid">
+                        <div class="report-item"><span>Chiffre d'affaires:</span> <strong style="color:#166534">+${formatMoney(data.revenue)}</strong></div>
+                        <div class="report-item"><span>Charges exploitation:</span> <strong style="color:#dc2626">-${formatMoney(data.operating)}</strong></div>
+                        <div class="report-item"><span>Salaires employés (brut):</span> <strong style="color:#dc2626">-${formatMoney(data.employeesGross)}</strong></div>
+                        <div class="report-item"><span>Charges patronales employés:</span> <strong style="color:#dc2626">-${formatMoney(data.employeesCharges)}</strong></div>
+                        ${data.directorSalary > 0 ? `<div class="report-item"><span>Directeur Groupe (brut):</span> <strong style="color:#dc2626">-${formatMoney(data.directorSalary)}</strong></div>` : ''}
+                        ${data.directorCharges > 0 ? `<div class="report-item"><span>Charges Directeur Groupe:</span> <strong style="color:#dc2626">-${formatMoney(data.directorCharges)}</strong></div>` : ''}
+                        ${data.personalSalary > 0 ? `<div class="report-item"><span>Votre salaire (brut):</span> <strong style="color:#dc2626">-${formatMoney(data.personalSalary)}</strong></div>` : ''}
+                        ${data.personalCharges > 0 ? `<div class="report-item"><span>Charges votre salaire:</span> <strong style="color:#dc2626">-${formatMoney(data.personalCharges)}</strong></div>` : ''}
+                        ${data.managementFees > 0 ? `<div class="report-item"><span>Management Fees (→ Holding):</span> <strong style="color:#6b21a8">-${formatMoney(data.managementFees)}</strong></div>` : ''}
+                        <div class="report-item"><span>Remb. capital dettes:</span> <strong style="color:#dc2626">-${formatMoney(data.debtCapital)}</strong></div>
+                        <div class="report-item"><span>Intérêts dettes:</span> <strong style="color:#dc2626">-${formatMoney(data.debtInterests)}</strong></div>
+                        ${fiscalHtml}
+                        <div class="report-item total"><span>BÉNÉFICE NET:</span> <strong>${formatMoney(data.profit)}</strong></div>
+                        <div class="report-item total" style="color:#0f766e"><span>💰 NET DANS VOTRE POCHE:</span> <strong>${formatMoney(netDirigeant + gameState.alternativeBenefits)}</strong></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function generateEvent() {
+            const container = document.getElementById('events-container');
+            if (gameState.companies.length > 0 && Math.random() < 0.4) {
+                const events = [
+                    { title: "🤝 Négociation fournisseurs groupée", description: "Meilleurs tarifs obtenus via la holding.", impact: 0, advice: "Pouvoir de négociation accru = avantage concret de la holding." },
+                    { title: "🔍 Contrôle URSSAF", description: "Vérification des management fees. Convention bien rédigée, aucun redressement.", impact: 0, advice: "Toujours avoir une convention écrite avec livrables concrets." },
+                    { title: "⚠️ Régularisation TNS", description: "URSSAF réclame un complément de cotisations.", impact: -1500, advice: "En EURL, mettez 45% de chaque euro de rémunération de côté." }
+                ];
+                const event = events[Math.floor(Math.random() * events.length)];
+                gameState.treasury += event.impact;
+                
+                container.innerHTML = `
+                    <div class="event-card">
+                        <h3>${event.title}</h3>
+                        <p>${event.description}</p>
+                        ${event.impact !== 0 ? `<div class="event-impact ${event.impact >= 0 ? 'positive' : 'negative'}">${event.impact >= 0 ? '+' : ''}${formatMoney(event.impact)}</div>` : ''}
+                        <div class="advice-box"><h4>💡 Conseil</h4><p>${event.advice}</p></div>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="event-card">
+                        <h3>📊 Mois calme</h3>
+                        <p>Activité normale. Consultez l'onglet "Historique" pour voir l'évolution.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // ========== UTILITAIRES ==========
+        
+        function showPedagogicalCard(title, content, example) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-content').innerHTML = `
+                <p>${content}</p>
+                ${example ? `<p style="margin-top:10px; padding:10px; background:#fef3c7; border-radius:6px; color:#92400e;"><strong>💡 À retenir :</strong> ${example}</p>` : ''}
+            `;
+            document.getElementById('pedagogical-modal').classList.add('active');
+        }
+
+        function closeModal(modalId = 'pedagogical-modal') {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(tabName + '-content').classList.add('active');
+        }
+
+        let treasuryChart;
+        function initChart() {
+            const ctx = document.getElementById('treasuryChart').getContext('2d');
+            treasuryChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Début'],
+                    datasets: [{
+                        label: 'Trésorerie (€)',
+                        data: [30000],
+                        borderColor: '#0d9488',
+                        backgroundColor: 'rgba(13, 148, 136, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { callback: v => formatMoney(v), font: { size: 10 } }
+                        },
+                        x: { ticks: { font: { size: 9 }, maxRotation: 45 } }
+                    }
+                }
+            });
+        }
+
+        function updateChart() {
+            const labels = gameState.treasuryHistory.map((_, i) => {
+                if (i === 0) return 'Début';
+                const m = ((i - 1) % 12) + 1;
+                const y = 2026 + Math.floor((i - 1) / 12);
+                return getMonthName(m) + ' ' + y;
+            });
+            treasuryChart.data.labels = labels;
+            treasuryChart.data.datasets[0].data = gameState.treasuryHistory;
+            treasuryChart.update();
+        }
+
+        function formatMoney(amount) {
+            return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(amount);
+        }
+
+        function getMonthName(month) {
+            return ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'][month - 1];
+        }
+
+        function saveGameState() {
+            localStorage.setItem('acquisitionSimV8', JSON.stringify(gameState));
+        }
+
+        function loadGameState() {
+            const saved = localStorage.getItem('acquisitionSimV8');
+            if (saved) gameState = JSON.parse(saved);
+        }
+
+        function init() {
+            loadGameState();
+            renderAll();
+            initChart();
+            updateChart();
+        }
+
+        init();
+    </script>
+</body>
+</html>
