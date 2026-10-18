@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12263f">
+<link rel="manifest" href="mesbus.webmanifest">
+<link rel="icon" href="mesbus-icon-192.png">
+<link rel="apple-touch-icon" href="mesbus-icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Mes bus</title>
+<style>
+:root{--bg:#eef1f4;--card:#fff;--fg:#12263f;--mut:#667689;--line:#dde3ea;--acc:#0d7c8c;--accfg:#fff;--bad:#c5372c}
+@media (prefers-color-scheme:dark){:root{--bg:#0c1624;--card:#15243a;--fg:#e9eef5;--mut:#8da0b5;--line:#243650;--acc:#3fb6c6;--accfg:#06202a;--bad:#ff8a80}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.4 "Avenir Next","Segoe UI",system-ui,sans-serif;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)}
+main{max-width:520px;margin:0 auto;padding:16px}
+header{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+h1{font-size:1.7rem;margin:0;flex:1;letter-spacing:-.02em}
+h2{font-size:1.15rem;margin:0}
+button{font:inherit;border:0;border-radius:12px;padding:10px 14px;background:var(--card);color:var(--fg);border:1px solid var(--line);cursor:pointer}
+button.main{background:var(--acc);color:var(--accfg);border-color:var(--acc);font-weight:600}
+button.danger{color:var(--bad)}
+button.ic{padding:8px 12px;font-size:1.1rem}
+input{font:inherit;width:100%;padding:11px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--fg);margin:6px 0}
+label{color:var(--mut);font-size:.85rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:12px}
+.theme{display:flex;align-items:center;gap:14px;width:100%;text-align:left;margin-bottom:12px;padding:16px;border-radius:18px}
+.theme .em{font-size:1.9rem}
+.theme .t{flex:1}
+.theme small,.mut{color:var(--mut)}
+.near{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc) inset}
+.tag{display:inline-block;background:var(--acc);color:var(--accfg);border-radius:20px;padding:1px 9px;font-size:.75rem;font-weight:600;margin-left:6px}
+.stop h2{margin-bottom:2px}
+.row{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0}
+.ln{min-width:42px;text-align:center;font-weight:700;color:#fff;border-radius:8px;padding:4px 6px}
+.dest{flex:1}
+.min{font-size:2rem;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;text-align:right}
+.min small{display:block;font-size:.7rem;font-weight:400;color:var(--mut)}
+.emojis{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.emojis button{font-size:1.4rem;padding:6px 10px}
+.emojis button.on{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc) inset}
+.res{display:flex;justify-content:space-between;gap:8px;width:100%;text-align:left;margin-top:8px}
+select{font:inherit;width:100%;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--card);color:var(--fg);margin-top:6px}
+.hd{display:flex;align-items:center;gap:14px;cursor:pointer}
+.hd .em{font-size:1.9rem}.hd .t{flex:1}
+.sum{margin-top:10px;display:flex;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:7px;margin:4px 14px 4px 0}
+.chip b{font-size:1.6rem;font-variant-numeric:tabular-nums;line-height:1}
+.chip small{color:var(--mut)}
+.pin{border-color:var(--acc)}
+.mini{display:flex;align-items:center;gap:8px;padding:4px 0}
+.mini .ln{min-width:34px;font-size:.85rem;padding:2px 6px}
+.mini .d{flex:1}
+.acts{display:flex;gap:8px;margin-top:10px}
+.acts>*{flex:1;text-align:center}
+a.btn{display:block;font:inherit;border-radius:12px;padding:10px 14px;background:var(--card);color:var(--fg);border:1px solid var(--line);text-decoration:none}
+.err{color:var(--bad);margin:8px 0}
+.empty{text-align:center;color:var(--mut);padding:40px 12px}
+</style>
+</head>
+<body>
+<main>
+
+<section id="home">
+  <header><h1>Mes arrêts</h1><button class="ic" onclick="openSettings()" aria-label="Réglages">⚙︎</button></header>
+  <div class="card pin" id="pin" hidden>
+    <label>Ma destination</label>
+    <select id="pinsel" onchange="S.pin=this.value;save();renderHome()"></select>
+    <div id="pinbox"></div>
+  </div>
+  <div id="themes"></div>
+  <button class="main" style="width:100%" onclick="openEdit()">Créer un thème</button>
+  <p class="mut" id="gpsnote"></p>
+</section>
+
+<section id="view" hidden>
+  <header><button class="ic" onclick="goHome()" aria-label="Retour">‹</button><h1 id="vt"></h1><button class="ic" onclick="openEdit(cur)" aria-label="Modifier">✎</button></header>
+  <div id="vs"></div>
+  <p class="mut" id="vupd"></p>
+</section>
+
+<section id="edit" hidden>
+  <header><button class="ic" onclick="goHome()" aria-label="Annuler">‹</button><h1 id="et">Nouveau thème</h1></header>
+  <label>Nom du thème</label>
+  <input id="ename" placeholder="Maison, Sport, Travail…">
+  <label>Icône</label>
+  <div class="emojis" id="emojis"></div>
+  <label>Arrêts du thème</label>
+  <div id="estops"></div>
+  <label>Ajouter un arrêt</label>
+  <input id="eq" placeholder="Nom de l'arrêt, ex. Georges Henri" onkeydown="if(event.key==='Enter')doSearch()">
+  <button style="width:100%" onclick="doSearch()">Chercher</button>
+  <div id="eres"></div>
+  <p class="err" id="eerr"></p>
+  <button class="main" style="width:100%;margin-top:8px" onclick="saveTheme()">Enregistrer le thème</button>
+  <button class="danger" id="edel" style="width:100%;margin-top:8px" onclick="delTheme()">Supprimer le thème</button>
+</section>
+
+<section id="settings" hidden>
+  <header><button class="ic" onclick="goHome()" aria-label="Retour">‹</button><h1>Réglages</h1></header>
+  <div class="card">
+    <label>Clé API STIB (clé primaire du portail)</label>
+    <input id="key" type="password" autocomplete="off">
+    <p class="mut">La clé reste enregistrée uniquement sur cet appareil.</p>
+    <button class="main" onclick="saveKey()">Enregistrer la clé</button>
+  </div>
+</section>
+
+</main>
+<script>
+const BASE="https://api-management-opendata-production.azure-api.net/api/datasets/stibmivb";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let S=JSON.parse(localStorage.getItem("stibapp")||'{"key":"","themes":[]}');
+const save=()=>localStorage.setItem("stibapp",JSON.stringify(S));
+let pos=null,cur=null,draft=null,timer=null;
+const EMOJIS=["🏠","🏋️","💼","🎓","🛒","⭐","🌳","🚶","🏞️","⚽","🏊","🚴","🍽️","☕","🏥","🛍️","🎭","🎬","🏫","🚉","✈️","👨‍👩‍👧","❤️","🐕","🎵","⛪","📚","🏖️"];
+
+function show(id){document.querySelectorAll("main>section").forEach(s=>s.hidden=s.id!==id);clearInterval(timer);scrollTo(0,0)}
+
+/* ---------- API ---------- */
+async function api(path,p){
+  const u=new URL(BASE+path+"/");
+  for(const k in p)u.searchParams.set(k,p[k]);
+  const r=await fetch(u,{headers:{"bmc-partner-key":S.key}});
+  if(!r.ok)throw new Error("Erreur "+r.status+(r.status==401||r.status==403?" : clé refusée, vérifie-la dans les réglages":""));
+  const j=await r.json();return j.results||[];
+}
+const J=v=>{if(typeof v==="string"){try{return JSON.parse(v)}catch(e){}}return v};
+const label=v=>{v=J(v);return v&&typeof v==="object"?(v.fr||v.nl||Object.values(v)[0]):v};
+function coords(o){
+  for(const k in o){if(/gps|coord/i.test(k)){const c=J(o[k]);
+    if(Array.isArray(c))return[+c[0],+c[1]];
+    if(c&&typeof c==="object"){const a=c.latitude??c.lat,b=c.longitude??c.lon??c.lng;if(a!=null)return[+a,+b]}}}
+  const a=o.latitude??o.lat,b=o.longitude??o.lon;return a!=null?[+a,+b]:null;
+}
+function hav(a,b){const R=6371e3,r=x=>x*Math.PI/180,dl=r(b[0]-a[0]),dn=r(b[1]-a[1]);
+  const h=Math.sin(dl/2)**2+Math.cos(r(a[0]))*Math.cos(r(b[0]))*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
+const fmtD=d=>d<1000?Math.round(d/10)*10+" m":(d/1000).toFixed(1)+" km";
+
+async function searchStops(q){
+  q=q.replace(/"/g,"");
+  for(const t of [q,q.replace(/\b\w/g,c=>c.toUpperCase())]){
+    const r=await api("/static/StopDetails",{where:`name LIKE "%${t}%"`,limit:30});
+    if(r.length)return r.map(o=>({id:String(o.id??o.pointid??o.stop_id),name:label(o.name),ll:coords(o)}));
+  }
+  return [];
+}
+async function times(id){
+  const r=await api("/rt/WaitingTimes",{where:`pointid="${id}"`,limit:50}),out=[];
+  for(const o of r){const pt=J(o.passingtimes??o.passingTimes)||[];
+    for(const p of pt){const m=Math.round((new Date(p.expectedArrivalTime)-Date.now())/6e4);
+      if(m>=-1)out.push({line:String(o.lineid??p.lineId??p.lineid??""),dest:label(p.destination)||"",m:Math.max(m,0)})}}
+  return out.sort((a,b)=>a.m-b.m);
+}
+const FIX={"28":"#d93025","61":"#d9a900","80":"#188038"};
+function color(l){if(FIX[l])return FIX[l];let h=0;for(const c of l)h=(h*31+c.charCodeAt(0))%360;return`hsl(${h} 55% 40%)`}
+
+/* ---------- Accueil ---------- */
+function themeDist(t){if(!pos)return null;let d=1e12;t.stops.forEach(s=>{if(s.ll)d=Math.min(d,hav(pos,s.ll))});return d<1e12?d:null}
+async function sumHtml(stops){
+  const g={};let err="";
+  await Promise.all(stops.map(async s=>{try{(await times(s.id)).forEach(x=>(g[x.line]=g[x.line]||[]).push(x.m))}catch(e){err=e.message}}));
+  const ks=Object.keys(g).sort((a,b)=>Math.min(...g[a])-Math.min(...g[b]));
+  if(!ks.length)return err?`<span class="err">${esc(err)}</span>`:'<span class="mut">Aucun passage prévu</span>';
+  return ks.map(l=>{const m=g[l].sort((a,b)=>a-b).slice(0,3);
+    return`<span class="chip"><span class="ln" style="background:${color(l)}">${esc(l)}</span><b>${m[0]}</b><small>${m.slice(1).map(x=>" · "+x).join("")} min</small></span>`}).join("");
+}
+function nearestStop(t){const st=[...t.stops];if(pos)st.sort((a,b)=>(a.ll?hav(pos,a.ll):1e12)-(b.ll?hav(pos,b.ll):1e12));return st[0]}
+function renderHome(){
+  const list=S.themes.map(t=>({t,d:themeDist(t)}));
+  if(pos)list.sort((a,b)=>(a.d??1e12)-(b.d??1e12));
+  $("#pin").hidden=!S.themes.length;
+  $("#pinsel").innerHTML='<option value="auto">Le plus proche de moi</option>'+S.themes.map(t=>`<option value="${t.id}">${t.emoji} ${esc(t.name)}</option>`).join("");
+  $("#pinsel").value=S.themes.some(t=>t.id===S.pin)?S.pin:"auto";
+  $("#themes").innerHTML=list.length?list.map(({t,d},i)=>{
+    const near=pos&&i===0&&d!=null&&d<600;
+    return`<div class="card${near?" near":""}"><div class="hd" onclick="openTheme('${t.id}')"><span class="em">${t.emoji}</span>
+      <span class="t"><b>${esc(t.name)}</b>${near?'<span class="tag">Près de vous</span>':""}<br><small class="mut">${t.stops.length} arrêt${t.stops.length>1?"s":""}${d!=null?" · à "+fmtD(d):""}</small></span>›</div>
+      <div class="sum" id="sum-${t.id}"><span class="mut">…</span></div></div>`}).join("")
+    :'<div class="empty">Aucun thème pour l\'instant.<br>Crée « Maison » ou « Sport » avec ses arrêts.</div>';
+  list.forEach(async({t})=>{const h=await sumHtml(t.stops),el=$("#sum-"+t.id);if(el)el.innerHTML=h});
+  const pt=S.themes.find(t=>t.id===S.pin)||(list[0]&&list[0].t);
+  if(pt){const st=nearestStop(pt);
+    sumHtml([st]).then(h=>{if($("#pinbox"))$("#pinbox").innerHTML=`<div style="margin-top:10px"><b>${esc(st.name)}</b> <span class="mut">${pos&&st.ll?"· "+fmtD(hav(pos,st.ll)):""}</span></div><div class="sum">${h}</div>`})}
+}
+function locate(){
+  if(!navigator.geolocation){$("#gpsnote").textContent="Position indisponible sur cet appareil.";return}
+  navigator.geolocation.getCurrentPosition(p=>{pos=[p.coords.latitude,p.coords.longitude];$("#gpsnote").textContent="";
+    if($("#home").hidden===false)renderHome()},
+    ()=>{$("#gpsnote").textContent="Active la localisation pour trier les thèmes selon l'endroit où tu es."},{enableHighAccuracy:true,timeout:8000,maximumAge:60000});
+}
+function goHome(){show("home");renderHome();locate();timer=setInterval(()=>{if(!$("#home").hidden)renderHome()},30000)}
+
+/* ---------- Écran d'un thème ---------- */
+async function openTheme(id){
+  cur=S.themes.find(t=>t.id===id);show("view");$("#vt").textContent=cur.emoji+" "+cur.name;
+  await refresh();timer=setInterval(refresh,30000);
+}
+async function refresh(){
+  if(!cur)return;
+  const stops=[...cur.stops];if(pos)stops.sort((a,b)=>(a.ll?hav(pos,a.ll):1e12)-(b.ll?hav(pos,b.ll):1e12));
+  const html=await Promise.all(stops.map(async s=>{
+    let body;try{const t=await times(s.id);
+      body=t.length?t.map(x=>`<div class="row"><span class="ln" style="background:${color(x.line)}">${esc(x.line)}</span><span class="dest">${esc(x.dest)}</span><span class="min">${x.m}<small>min</small></span></div>`).join(""):'<p class="mut">Aucun passage prévu.</p>'}
+    catch(e){body=`<p class="err">${esc(e.message)}</p>`}
+    return`<div class="card stop"><h2>${esc(s.name)}</h2><span class="mut">${pos&&s.ll?fmtD(hav(pos,s.ll)):""}</span>${body}</div>`}));
+  $("#vs").innerHTML=html.join("")||'<div class="empty">Ce thème n\'a pas d\'arrêt.</div>';
+  $("#vupd").textContent="Mis à jour à "+new Date().toLocaleTimeString("fr-BE",{hour:"2-digit",minute:"2-digit"});
+}
+
+/* ---------- Création / modification ---------- */
+function openEdit(t){
+  draft=t?JSON.parse(JSON.stringify(t)):{id:"t"+Date.now(),name:"",emoji:"🏠",stops:[]};
+  $("#et").textContent=t?"Modifier":"Nouveau thème";$("#ename").value=draft.name;$("#eq").value="";
+  $("#eres").innerHTML="";$("#eerr").textContent="";$("#edel").hidden=!t;show("edit");drawEdit();
+}
+function drawEdit(){
+  $("#emojis").innerHTML=EMOJIS.map(e=>`<button class="${e===draft.emoji?"on":""}" onclick="draft.emoji='${e}';drawEdit()">${e}</button>`).join("");
+  $("#estops").innerHTML=draft.stops.map((s,i)=>`<div class="card" style="display:flex;align-items:center;gap:8px"><span style="flex:1">${esc(s.name)}<br><small class="mut">${esc(s.desc||"")}</small></span><button class="ic danger" onclick="draft.stops.splice(${i},1);drawEdit()">✕</button></div>`).join("")||'<p class="mut">Aucun arrêt ajouté.</p>';
+}
+async function doSearch(){
+  $("#eerr").textContent="";$("#eres").innerHTML='<p class="mut">Recherche…</p>';
+  try{
+    if(!pos)await new Promise(r=>navigator.geolocation?navigator.geolocation.getCurrentPosition(p=>{pos=[p.coords.latitude,p.coords.longitude];r()},r,{timeout:4000}):r());
+    let r=await searchStops($("#eq").value.trim());
+    if(pos)r.sort((a,b)=>(a.ll?hav(pos,a.ll):1e12)-(b.ll?hav(pos,b.ll):1e12));
+    r=r.slice(0,12);
+    await Promise.all(r.map(async s=>{
+      try{const t=await times(s.id),seen={};t.forEach(x=>{if(!seen[x.line+"|"+x.dest])seen[x.line+"|"+x.dest]=x});
+        s.lines=Object.values(seen);s.desc=s.lines.map(x=>x.line+" → "+x.dest).join(" · ")}
+      catch(e){s.lines=[];s.desc=""}}));
+    window._res=r;
+    $("#eres").innerHTML=r.map((s,i)=>`<div class="card"><b>${esc(s.name)}</b> <span class="mut">${pos&&s.ll?"· à "+fmtD(hav(pos,s.ll)):""}</span>
+      ${s.lines.length?s.lines.map(x=>`<div class="mini"><span class="ln" style="background:${color(x.line)}">${esc(x.line)}</span><span class="d">${esc(x.dest)}</span><span class="mut">${x.m} min</span></div>`).join(""):'<p class="mut">Aucun passage en ce moment (lignes non visibles).</p>'}
+      <div class="acts"><button class="main" onclick="addStop(${i})">Ajouter</button>${s.ll?`<a class="btn" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${s.ll[0]},${s.ll[1]}">Voir sur la carte</a>`:""}</div></div>`).join("")
+      ||'<p class="mut">Aucun arrêt trouvé. Essaie avec moins de lettres.</p>';
+  }catch(e){$("#eres").innerHTML="";$("#eerr").textContent=e.message}
+}
+function addStop(i){const s=window._res[i];if(!draft.stops.some(x=>x.id===s.id))draft.stops.push({id:s.id,name:s.name,ll:s.ll,desc:s.desc||""});drawEdit();$("#estops").scrollIntoView({behavior:"smooth"})}
+function saveTheme(){
+  draft.name=$("#ename").value.trim();
+  if(!draft.name){$("#eerr").textContent="Donne un nom au thème.";return}
+  if(!draft.stops.length){$("#eerr").textContent="Ajoute au moins un arrêt.";return}
+  const i=S.themes.findIndex(t=>t.id===draft.id);i>=0?S.themes[i]=draft:S.themes.push(draft);save();goHome();
+}
+function delTheme(){if(confirm("Supprimer ce thème ?")){S.themes=S.themes.filter(t=>t.id!==draft.id);save();goHome()}}
+
+/* ---------- Réglages ---------- */
+function openSettings(){$("#key").value=S.key;show("settings")}
+function saveKey(){S.key=$("#key").value.trim();save();goHome()}
+
+if("serviceWorker" in navigator)navigator.serviceWorker.register("mesbus-sw.js",{scope:"./mesbus.html"}).catch(()=>{});
+if(!S.key)openSettings();else goHome();
+</script>
+</body>
+</html>

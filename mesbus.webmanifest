@@ -1,0 +1,18 @@
+{
+  "id": "./mesbus.html",
+  "name": "Mes bus",
+  "short_name": "Mes bus",
+  "description": "Prochains passages STIB à tes arrêts favoris, par thème.",
+  "start_url": "./mesbus.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#12263f",
+  "theme_color": "#12263f",
+  "lang": "fr",
+  "icons": [
+    {"src": "mesbus-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "mesbus-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "mesbus-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
